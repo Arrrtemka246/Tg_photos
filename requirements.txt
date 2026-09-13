@@ -1,4 +1,4 @@
-requests
+requests[socks]
 python-dotenv
 python-telegram-bot==13.15
 standard-imghdr

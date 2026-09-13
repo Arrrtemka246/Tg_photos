@@ -2,6 +2,10 @@ import os
 from urllib.parse import unquote, urlsplit
 
 import requests
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 
 def get_response(url, params=None):
@@ -9,13 +13,24 @@ def get_response(url, params=None):
         'User-Agent': 'space-telegram/1.0',
     }
 
+    proxy_url = os.getenv('PROXY_URL')
+
+    proxies = None
+    if proxy_url:
+        proxies = {
+            'http': proxy_url,
+            'https': proxy_url,
+        }
+
     response = requests.get(
         url,
         params=params,
         headers=headers,
+        proxies=proxies,
         timeout=30,
     )
     response.raise_for_status()
+
     return response
 
 
