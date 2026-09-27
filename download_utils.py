@@ -2,40 +2,44 @@ import os
 from urllib.parse import unquote, urlsplit
 
 import requests
-from dotenv import load_dotenv
 
 
-load_dotenv()
+REQUEST_TIMEOUT_SECONDS = 30
 
 
-def get_response(url, params=None):
+def get_proxies(proxy_url):
+    if not proxy_url:
+        return None
+
+    return {
+        'http': proxy_url,
+        'https': proxy_url,
+    }
+
+
+def get_response(url, params=None, proxies=None):
     headers = {
         'User-Agent': 'space-telegram/1.0',
     }
-
-    proxy_url = os.getenv('PROXY_URL')
-
-    proxies = None
-    if proxy_url:
-        proxies = {
-            'http': proxy_url,
-            'https': proxy_url,
-        }
 
     response = requests.get(
         url,
         params=params,
         headers=headers,
         proxies=proxies,
-        timeout=30,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
 
     return response
 
 
-def download_image(url, filepath, params=None):
-    response = get_response(url, params=params)
+def download_image(url, filepath, params=None, proxies=None):
+    response = get_response(
+        url,
+        params=params,
+        proxies=proxies,
+    )
 
     with open(filepath, 'wb') as file:
         file.write(response.content)

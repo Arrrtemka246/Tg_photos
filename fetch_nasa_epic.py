@@ -6,10 +6,22 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-from download_utils import download_image, get_response
+from download_utils import (
+    download_image,
+    get_proxies,
+    get_response,
+)
 
 
-def fetch_nasa_epic(api_key, images_count):
+DEFAULT_IMAGES_COUNT = 5
+NASA_DEMO_API_KEY = 'DEMO_KEY'
+
+
+def fetch_nasa_epic(
+    api_key,
+    images_count,
+    proxies=None,
+):
     api_url = 'https://api.nasa.gov/EPIC/api/natural'
 
     params = {
@@ -17,27 +29,33 @@ def fetch_nasa_epic(api_key, images_count):
     }
 
     try:
-        response = get_response(api_url, params=params)
+        response = get_response(
+            api_url,
+            params=params,
+            proxies=proxies,
+        )
     except requests.RequestException:
-        api_key = 'DEMO_KEY'
+        api_key = NASA_DEMO_API_KEY
 
         params = {
             'api_key': api_key,
         }
 
-        response = get_response(api_url, params=params)
+        response = get_response(
+            api_url,
+            params=params,
+            proxies=proxies,
+        )
 
     epic_images = response.json()
 
     images_dir = Path('images')
     images_dir.mkdir(exist_ok=True)
 
-    downloaded_images = 0
-
-    for epic_image in epic_images:
-        if downloaded_images >= images_count:
-            break
-
+    for image_number, epic_image in enumerate(
+        epic_images[:images_count],
+        start=1,
+    ):
         image_name = epic_image['image']
 
         image_date = datetime.strptime(
@@ -53,7 +71,7 @@ def fetch_nasa_epic(api_key, images_count):
 
         image_path = (
             images_dir
-            / f'epic_{downloaded_images + 1}.png'
+            / f'epic_{image_number}.png'
         )
 
         try:
@@ -61,25 +79,27 @@ def fetch_nasa_epic(api_key, images_count):
                 image_url,
                 image_path,
                 params={'api_key': api_key},
+                proxies=proxies,
             )
         except requests.RequestException:
             continue
-
-        downloaded_images += 1
 
 
 def main():
     load_dotenv()
 
     nasa_api_key = os.environ['NASA_API_KEY']
+    proxy_url = os.getenv('PROXY_URL')
+    proxies = get_proxies(proxy_url)
 
-    parser = argparse.ArgumentParser()
-
+    parser = argparse.ArgumentParser(
+        description='Скачивает фотографии Земли из NASA EPIC.',
+    )
     parser.add_argument(
         '--count',
         type=int,
-        default=5,
-        help='Количество снимков',
+        default=DEFAULT_IMAGES_COUNT,
+        help='Количество фотографий для скачивания',
     )
 
     args = parser.parse_args()
@@ -87,6 +107,7 @@ def main():
     fetch_nasa_epic(
         nasa_api_key,
         args.count,
+        proxies,
     )
 
 
